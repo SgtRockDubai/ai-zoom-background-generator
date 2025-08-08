@@ -1,16 +1,26 @@
-import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
+// @ts-nocheck
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve as resolvePath } from 'node:path';
+import { defineConfig, loadEnv, type ConfigEnv } from 'vite';
 
-export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, '.', '');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+export default defineConfig((envCfg: ConfigEnv) => {
+    const env = loadEnv(envCfg.mode, '.', '');
     return {
-      define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+      server: {
+        proxy: {
+          '/api': {
+            target: 'http://localhost:8787',
+            changeOrigin: true,
+            secure: false
+          }
+        }
       },
       resolve: {
         alias: {
-          '@': path.resolve(__dirname, '.'),
+          '@': resolvePath(__dirname, '.'),
         }
       }
     };

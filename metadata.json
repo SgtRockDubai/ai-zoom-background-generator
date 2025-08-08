@@ -1,5 +1,8 @@
 {
   "name": "AI Zoom Background Generator",
   "description": "Create beautiful, professional, and unique Zoom backgrounds for free using AI. Just describe the scene you want, and the AI will generate a high-resolution image for you to download.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "backend": {
+    "port": 8787
+  }
 }
