@@ -26,6 +26,13 @@ app.post('/api/generate-image', async (req, res) => {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
+    // Mock mode: allow testing without a real API key
+    if (process.env.MOCK_AI === 'true') {
+      // 1x1 gray JPEG pixel
+      const placeholder = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxAQEBUQFRUQFRUVFRUVFRUVFRUVFhUVFhUVFRUYHSggGBolHRUVITEhJSkrLi4uFx8zODMsNygtLisBCgoKDg0OGxAQGy0lICUtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLf/AABEIAAEAAQMBIgACEQEDEQH/xAAXAAEBAQEAAAAAAAAAAAAAAAAABQEE/8QAFxABAQEBAAAAAAAAAAAAAAAAAQACIf/EABYBAQEBAAAAAAAAAAAAAAAAAAACA//EABYRAQEBAAAAAAAAAAAAAAAAAAABEf/aAAwDAQACEQMRAD8A7wCKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/2Q==';
+      return res.json({ imageBytes: placeholder });
+    }
+
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return res.status(500).json({ error: 'Server is not configured with GEMINI_API_KEY' });
@@ -68,7 +75,6 @@ app.listen(port, () => {
   console.log(`Server listening on http://localhost:${port}`);
 });
 
-// Lightweight JS entrypoint to avoid needing ts-node for dev
-import('./index.ts');
+// Note: no dynamic import of TypeScript entry; this JS file is the server entry.
 
 
