@@ -1,13 +1,16 @@
+const API_BASE = import.meta.env.VITE_API_BASE ?? '';
+
 export const generateImage = async (userPrompt: string): Promise<string> => {
-  if (!userPrompt.trim()) {
-    throw new Error("Prompt cannot be empty.");
+  const trimmed = userPrompt.trim();
+  if (!trimmed) {
+    throw new Error('Prompt cannot be empty.');
   }
 
   try {
-    const response = await fetch('/api/generate-image', {
+    const response = await fetch(`${API_BASE}/api/generate-image`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: userPrompt })
+      body: JSON.stringify({ prompt: trimmed })
     });
 
     if (!response.ok) {

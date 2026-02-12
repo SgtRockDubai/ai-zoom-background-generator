@@ -1,27 +1,25 @@
-// @ts-nocheck
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve as resolvePath } from 'node:path';
-import { defineConfig, loadEnv, type ConfigEnv } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig((envCfg: ConfigEnv) => {
-    const env = loadEnv(envCfg.mode, '.', '');
-    return {
-      server: {
-        proxy: {
-          '/api': {
-            target: 'http://localhost:8787',
-            changeOrigin: true,
-            secure: false
-          }
-        }
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  return {
+    server: {
+      proxy: {
+        '/api': {
+          target: env.VITE_API_TARGET ?? 'http://localhost:8787',
+          changeOrigin: true,
+          secure: false,
+        },
       },
-      resolve: {
-        alias: {
-          '@': resolvePath(__dirname, '.'),
-        }
-      }
-    };
+    },
+    resolve: {
+      alias: {
+        '@': resolve(__dirname, '.'),
+      },
+    },
+  };
 });
