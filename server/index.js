@@ -32,15 +32,31 @@ const validatePort = (value) => {
 
 const port = validatePort(parseIntegerEnv(process.env.PORT, 8787));
 const imageTimeoutMs = parseIntegerEnv(process.env.IMAGE_TIMEOUT_MS, 30000);
+const requestsPerMinute = parseIntegerEnv(process.env.IMAGE_REQUESTS_PER_MINUTE, 10);
+const dailyImageLimitPerIp = parseIntegerEnv(process.env.DAILY_IMAGE_LIMIT_PER_IP, 50);
+const appAccessToken = process.env.APP_ACCESS_TOKEN?.trim() ?? '';
 
 // Validation constants
 const PROMPT_MIN_LENGTH = 1;
 const PROMPT_MAX_LENGTH = 2000;
 
 const app = express();
+const dailyUsageByIp = new Map();
 
 if (!Number.isInteger(imageTimeoutMs) || imageTimeoutMs < 1000) {
   throw new Error(`Invalid IMAGE_TIMEOUT_MS "${String(process.env.IMAGE_TIMEOUT_MS)}". Use an integer >= 1000.`);
+}
+
+if (!Number.isInteger(requestsPerMinute) || requestsPerMinute < 1) {
+  throw new Error(`Invalid IMAGE_REQUESTS_PER_MINUTE "${String(process.env.IMAGE_REQUESTS_PER_MINUTE)}". Use an integer >= 1.`);
+}
+
+if (!Number.isInteger(dailyImageLimitPerIp) || dailyImageLimitPerIp < 1) {
+  throw new Error(`Invalid DAILY_IMAGE_LIMIT_PER_IP "${String(process.env.DAILY_IMAGE_LIMIT_PER_IP)}". Use an integer >= 1.`);
+}
+
+if (isProduction && !appAccessToken) {
+  throw new Error('APP_ACCESS_TOKEN must be set in production.');
 }
 
 // Security: Use simple query parser to avoid prototype pollution (CVE-2024-51999)
@@ -93,10 +109,51 @@ app.use(cors(corsOptions));
 
 app.use(express.json({ limit: '2mb' }));
 
-// Rate limiting: prevent abuse (10 requests per minute per IP for image generation)
+const getClientIp = (req) => req.ip || req.socket.remoteAddress || 'unknown';
+
+const getUtcDayKey = () => new Date().toISOString().slice(0, 10);
+
+const consumeDailyQuota = (ip) => {
+  const today = getUtcDayKey();
+  const existing = dailyUsageByIp.get(ip);
+  const nextUsage = existing?.day === today
+    ? { day: today, count: existing.count + 1 }
+    : { day: today, count: 1 };
+
+  dailyUsageByIp.set(ip, nextUsage);
+  return {
+    allowed: nextUsage.count <= dailyImageLimitPerIp,
+    remaining: Math.max(dailyImageLimitPerIp - nextUsage.count, 0),
+  };
+};
+
+const requireAppAccessToken = (req, res, next) => {
+  if (!appAccessToken) return next();
+
+  const providedToken = req.get('X-App-Access-Token')?.trim();
+  if (providedToken !== appAccessToken) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  return next();
+};
+
+const enforceDailyQuota = (req, res, next) => {
+  const usage = consumeDailyQuota(getClientIp(req));
+  res.setHeader('X-Daily-Image-Limit', String(dailyImageLimitPerIp));
+  res.setHeader('X-Daily-Image-Remaining', String(usage.remaining));
+
+  if (!usage.allowed) {
+    return res.status(429).json({ error: 'Daily image limit reached. Please try again tomorrow.' });
+  }
+
+  return next();
+};
+
+// Rate limiting: prevent short bursts per IP for image generation
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 10,
+  max: requestsPerMinute,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests. Please try again later.' }
@@ -107,10 +164,10 @@ app.use('/api/', apiLimiter);
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
 // Image generation endpoint
-app.post('/api/generate-image', async (req, res) => {
+app.post('/api/generate-image', requireAppAccessToken, enforceDailyQuota, async (req, res) => {
   try {
     const { prompt } = req.body ?? {};
-    const promptStr = typeof prompt === 'string' ? prompt : String(prompt ?? '').trim();
+    const promptStr = typeof prompt === 'string' ? prompt.trim() : String(prompt ?? '').trim();
 
     if (promptStr.length < PROMPT_MIN_LENGTH) {
       return res.status(400).json({ error: 'Prompt is required' });

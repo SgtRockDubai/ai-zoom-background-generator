@@ -1,4 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
+const APP_ACCESS_TOKEN = import.meta.env.VITE_APP_ACCESS_TOKEN ?? '';
 
 export const generateImage = async (userPrompt: string): Promise<string> => {
   const trimmed = userPrompt.trim();
@@ -7,9 +8,17 @@ export const generateImage = async (userPrompt: string): Promise<string> => {
   }
 
   try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+
+    if (APP_ACCESS_TOKEN) {
+      headers['X-App-Access-Token'] = APP_ACCESS_TOKEN;
+    }
+
     const response = await fetch(`${API_BASE}/api/generate-image`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ prompt: trimmed })
     });
 
