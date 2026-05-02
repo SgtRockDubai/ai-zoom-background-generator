@@ -11,21 +11,21 @@
     "dev:full": "concurrently -k \"npm:server\" \"vite\""
   },
   "dependencies": {
-    "@google/genai": "^1.8.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "express-rate-limit": "^8.2.1",
-    "helmet": "^8.1.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "@google/genai": "1.51.0",
+    "cors": "2.8.5",
+    "dotenv": "16.6.1",
+    "express": "4.22.1",
+    "express-rate-limit": "8.4.1",
+    "helmet": "8.1.0",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/node": "^22.14.0",
-    "concurrently": "^9.1.0",
-    "typescript": "~5.7.2",
-    "vite": "^6.2.0"
+    "@types/cors": "2.8.19",
+    "@types/express": "4.17.23",
+    "@types/node": "22.18.1",
+    "concurrently": "9.2.1",
+    "typescript": "5.7.3",
+    "vite": "6.4.2"
   }
 }
